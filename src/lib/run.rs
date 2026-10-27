@@ -4,7 +4,7 @@ use tokio::sync::mpsc::channel;
 use crate::providers::http::Report as HttpReport;
 use crate::report::{ErrorReport, Report};
 use crate::tasks::adapters::from_file;
-use crate::utils::timestamp::current_timestamp;
+use crate::utils::timestamp::{current_timestamp, format_timestamp};
 use crate::worker::{Squad, Worker};
 
 /// This is likely to change in the future in order
@@ -21,10 +21,10 @@ pub async fn run() -> Result<()> {
 
     let print_proc = tokio::spawn(async move {
         println!(
-            "{0: <15} | {1: <15} | {2: <20} | {3: <15} | {4: <15}",
-            "Log Time", "Task", "HTTP. Status Code", "Req. Time", "Res. Time"
+            "{0: <30} | {1: <15} | {2: <20} | {3: <10}",
+            "Log Time", "Task", "HTTP. Status Code", "Req. Time"
         );
-        println!("==========================================================================================");
+        println!("=====================================================================================");
         while let Some(report) = rx.recv().await {
             match report {
                 Report::Http(HttpReport {
@@ -35,12 +35,11 @@ pub async fn run() -> Result<()> {
                     ..
                 }) => {
                     println!(
-                        "{0: <15} | {1: <15} | {2: <20} | {3: <15} | {4: <15}",
-                        current_timestamp(),
+                        "{0: <30} | {1: <15} | {2: <20} | {3: <10}",
+                        format_timestamp(current_timestamp()),
                         id,
                         status_code,
-                        req_start,
-                        req_end
+                        format!("{}ms", req_end - req_start)
                     );
                 }
                 Report::Error(ErrorReport {
@@ -50,12 +49,11 @@ pub async fn run() -> Result<()> {
                     req_end,
                 }) => {
                     println!(
-                        "{0: <15} | {1: <15} | {2: <20} | {3: <15} | {4: <15}",
-                        current_timestamp(),
+                        "{0: <30} | {1: <15} | {2: <20} | {3: <10}",
+                        format_timestamp(current_timestamp()),
                         id,
                         error,
-                        req_start,
-                        req_end
+                        format!("{}ms", req_end - req_start)
                     );
                 }
             }
