@@ -25,9 +25,27 @@ to perform checks on remote addresses periodically.
 
 ## Usage
 
-> This is a fork of the original [EstebanBorai/nasu](https://github.com/EstebanBorai/nasu).
-> It adds colored output (`--color`), a per-request timeout, concurrency guards,
-> and a reworked timestamp format. All task configuration is HTTP-only.
+This is a fork of the original [EstebanBorai/nasu](https://github.com/EstebanBorai/nasu).
+It adds the following changes:
+
+- **`--color` flag** — colored output: HTTP `200` green, `3xx`/`4xx` yellow,
+  `5xx` red; request delay `<500ms` green, `500–999ms` yellow, `>=1000ms` red.
+- **HTTP `notify`** — optional top-level `notify` config that POSTs a copy of
+  each report to a remote URL, with a `send` filter (`all` / `non-200` /
+  `errors`), `format` (`json` / `plaintext`) and a `template` with placeholders.
+- **Concurrency guard** — a worker never overlaps itself; slow sites are polled
+  one request at a time.
+- **Per-request timeout** — requests are aborted after 60s instead of hanging.
+- **Graceful errors** — connection failures / timeouts are reported in the table
+  (e.g. `CONNECTION REFUSED`, `TIMEOUT`) instead of panicking.
+- **Timestamps** — Log Time is shown in the server's local timezone with its UTC
+  offset (e.g. `2026-10-27 17:42:01 UTC+03:00`).
+- **Single `Req. Time` column** — request duration in milliseconds (was a
+  separate `Req. Time` / `Res. Time` pair).
+- **HTTP-only config** — the per-task `type` field is gone; every task is HTTP.
+- **Config shape** — `nasu.json` is now an object with `notify` and `tasks`
+  (was a plain array).
+- **Fixed column alignment** when using colors.
 
 Build and install from this repository:
 
