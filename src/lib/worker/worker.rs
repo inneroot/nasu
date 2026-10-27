@@ -19,10 +19,10 @@ pub struct Worker {
 impl Worker {
     /// Performs this Worker's task
     pub async fn perform_task(&self) -> Result<Report> {
-        let report = self.perform.perform().await?;
+        let report = self.perform.perform().await;
         *self.last_run_at.write().await = Some(Utc::now());
 
-        Ok(report)
+        report
     }
 
     /// Checks if the Worker must be executed or not based

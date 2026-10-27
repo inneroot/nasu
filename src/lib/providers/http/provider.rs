@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use url::Url;
 
-use crate::report::Report;
+use crate::report::{ErrorReport, Report};
 use crate::tasks::{Params as TaskParams, Task};
 use crate::utils::timestamp::current_timestamp;
 use crate::worker::perform::Perform;
@@ -65,11 +65,21 @@ impl Perform for Provider {
                 self.task_title
             ))?;
 
-        let response = self.http_client.request(request).await.unwrap();
+        let response = match self.http_client.request(request).await {
+            Ok(response) => response,
+            Err(err) => {
+                return Ok(Report::Error(ErrorReport {
+                    id: self.task_title.clone(),
+                    error: describe_error(&err),
+                    req_start,
+                    req_end: current_timestamp(),
+                }));
+            }
+        };
         let mut headers: HashMap<String, String> = HashMap::new();
 
         for (k, v) in response.headers() {
-            headers.insert(k.to_string(), v.to_str().unwrap().to_string());
+            headers.insert(k.to_string(), v.to_str().unwrap_or_default().to_string());
         }
 
         let http_report = HttpReport {
@@ -82,4 +92,25 @@ impl Perform for Provider {
 
         Ok(Report::Http(http_report))
     }
+}
+
+fn describe_error(err: &dyn std::error::Error) -> String {
+    let mut source = err.source();
+
+    while let Some(cause) = source {
+        if let Some(io_err) = cause.downcast_ref::<std::io::Error>() {
+            return match io_err.kind() {
+                std::io::ErrorKind::ConnectionRefused => "CONNECTION REFUSED".to_string(),
+                std::io::ErrorKind::TimedOut => "TIMEOUT".to_string(),
+                std::io::ErrorKind::ConnectionReset => "CONNECTION RESET".to_string(),
+                std::io::ErrorKind::HostUnreachable => "HOST UNREACHABLE".to_string(),
+                std::io::ErrorKind::NetworkUnreachable => "NETWORK UNREACHABLE".to_string(),
+                _ => io_err.to_string(),
+            };
+        }
+
+        source = cause.source();
+    }
+
+    err.to_string()
 }

@@ -2,7 +2,7 @@ use anyhow::{Context, Error, Result};
 use tokio::sync::mpsc::channel;
 
 use crate::providers::http::Report as HttpReport;
-use crate::report::Report;
+use crate::report::{ErrorReport, Report};
 use crate::tasks::adapters::from_file;
 use crate::utils::timestamp::current_timestamp;
 use crate::worker::{Squad, Worker};
@@ -39,6 +39,21 @@ pub async fn run() -> Result<()> {
                         current_timestamp(),
                         id,
                         status_code,
+                        req_start,
+                        req_end
+                    );
+                }
+                Report::Error(ErrorReport {
+                    id,
+                    error,
+                    req_start,
+                    req_end,
+                }) => {
+                    println!(
+                        "{0: <15} | {1: <15} | {2: <20} | {3: <15} | {4: <15}",
+                        current_timestamp(),
+                        id,
+                        error,
                         req_start,
                         req_end
                     );
