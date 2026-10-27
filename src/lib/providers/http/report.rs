@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Report {
     pub id: String,
     pub headers: HashMap<String, String>,

@@ -1,6 +1,7 @@
 use anyhow::{Context, Error, Result};
 use tokio::sync::mpsc::channel;
 
+use crate::notify::{matches, send_notify};
 use crate::providers::http::Report as HttpReport;
 use crate::report::{ErrorReport, Report};
 use crate::tasks::adapters::from_file;
@@ -14,9 +15,10 @@ use crate::worker::{Squad, Worker};
 const CONFIG_FILE_NAME: &str = "nasu.json";
 
 pub async fn run(use_color: bool) -> Result<()> {
-    let tasks =
+    let config =
         from_file(CONFIG_FILE_NAME).context(format!("Failed to parse \"{}\"", CONFIG_FILE_NAME))?;
-    let workers: Vec<Worker> = tasks.into_iter().map(|task| Worker::from(task)).collect();
+    let notify = config.notify;
+    let workers: Vec<Worker> = config.tasks.into_iter().map(Worker::from).collect();
     let (tx, mut rx) = channel::<Report>(1024);
     let squad = Squad::new(workers, tx);
 
@@ -27,7 +29,12 @@ pub async fn run(use_color: bool) -> Result<()> {
         );
         println!("=====================================================================================");
         while let Some(report) = rx.recv().await {
-            match report {
+            let should_notify = notify
+                .as_ref()
+                .map(|n| matches(n.send, &report))
+                .unwrap_or(false);
+
+            match &report {
                 Report::Http(HttpReport {
                     id,
                     req_end,
@@ -39,7 +46,7 @@ pub async fn run(use_color: bool) -> Result<()> {
                         "{0: <30} | {1: <15} | {2: <20} | {3: <10}",
                         format_timestamp(current_timestamp()),
                         id,
-                        status_cell(use_color, status_code),
+                        status_cell(use_color, *status_code),
                         delay_cell(use_color, req_end - req_start)
                     );
                 }
@@ -56,6 +63,18 @@ pub async fn run(use_color: bool) -> Result<()> {
                         red(use_color, error.clone()),
                         delay_cell(use_color, req_end - req_start)
                     );
+                }
+            }
+
+            if should_notify {
+                if let Some(notify) = &notify {
+                    let notify = notify.clone();
+                    let report = report.clone();
+                    tokio::spawn(async move {
+                        if let Err(err) = send_notify(&notify, &report).await {
+                            eprintln!("Notify failed for {}: {:?}", report.id(), err);
+                        }
+                    });
                 }
             }
         }

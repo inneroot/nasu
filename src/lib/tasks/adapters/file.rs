@@ -3,9 +3,9 @@ use serde_json::from_str;
 use std::fs::read_to_string;
 use std::path::Path;
 
-use crate::tasks::Task;
+use crate::tasks::Config;
 
-pub fn from_file<P>(path: P) -> Result<Vec<Task>>
+pub fn from_file<P>(path: P) -> Result<Config>
 where
     P: AsRef<Path> + std::fmt::Debug + std::marker::Copy,
 {

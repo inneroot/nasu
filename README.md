@@ -110,27 +110,39 @@ in the `nasu.json` file.
 `nasu.json` is the default configuration file for Nasu. This file is
 parsed at startup by Nasu to initialize `Workers`.
 
-The `nasu.json` file is composed by an array of `Task` objects as shown
-below:
+The `nasu.json` file is composed by an optional `notify` object and an array
+of `tasks` as shown below:
 
 ```json
 // nasu.json
-[
-  {
-    "id": "HTTPBIN POST Request",
-    "task": {
-      "interval": "* */10 * * * *"
+{
+  "notify": {
+    "url": "http://127.0.0.1:8080/hook",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Auth": "Bearer <Token>"
     },
-    "params": {
-      "url": "http://httpbin.org/post",
-      "method": "POST",
-      "headers": {
-        "authorization": "Bearer <Token>",
-        "content-type": "application/json"
+    "send": "errors",
+    "format": "json"
+  },
+  "tasks": [
+    {
+      "id": "HTTPBIN POST Request",
+      "task": {
+        "interval": "0 */10 * * * *"
+      },
+      "params": {
+        "url": "http://httpbin.org/post",
+        "method": "POST",
+        "headers": {
+          "authorization": "Bearer <Token>",
+          "content-type": "application/json"
+        }
       }
     }
-  }
-]
+  ]
+}
 ```
 
 Each of these `Task` must contain the following properties:
@@ -141,6 +153,65 @@ Property | Description | Required | Possible Values
 `task` | Task configuration | Yes | N/A
 `task.interval` | Cron defintion to specify when to perform the test | Yes | N/A
 `params` | Params for the `Worker` used on perform. [Refer to Worker Params](#worker-params) | Yes | N/A
+
+### `notify`
+
+The optional top-level `notify` object sends a copy of each report to a remote
+URL over HTTP. When omitted, Nasu only prints results to the console. When
+present, the notification is sent in addition to the console output.
+
+The following properties are supported:
+
+Property | Description | Required | Default
+--- | --- | --- | ---
+`url` | URL to send the notification to | Yes | N/A
+`method` | HTTP method used to send the request | No | `POST`
+`headers` | Headers to provide on the notification request | No | `{}`
+`send` | Which reports to send | No | `all`
+`format` | Payload format (`json` or `plaintext`) | No | `json`
+`template` | Custom payload built from placeholders; overrides `format` | No | N/A
+
+The `send` option accepts the following values:
+
+Value | Sends
+--- | ---
+`all` | Every report
+`non-200` | Any HTTP status other than `200`, connection errors and timeouts
+`errors` | Connection errors and timeouts only (`500` is always sent)
+
+The `format` option produces either a JSON payload with the report data
+(`id`, `type`, `status_code`/`error`, `headers`, `req_start`, `req_end`,
+`logged_at`) or a `plaintext` line matching the console table row.
+
+When `template` is set it takes precedence over `format` and builds the body
+by substituting the following placeholders with values from the report:
+
+Placeholder | Value
+--- | ---
+`%ID` | Task id
+`%Status` | Status code (HTTP) or error text
+`%ReqTime` | Request duration, e.g. `252ms`
+`%ReqStart` / `%ReqEnd` | Request start / end time (Unix ms)
+`%Error` | Error text (empty for HTTP reports)
+`%LoggedAt` | Report creation time (Unix ms)
+
+Example:
+
+```json
+{
+  "notify": {
+    "url": "http://127.0.0.1:8080/hook",
+    "method": "POST",
+    "template": "{\"content\": \"%ID %Status %ReqTime\"}"
+  }
+}
+```
+
+Sends a body like `{"content": "httpbin get 200 252ms"}`.
+
+> Note: the default `method` is `POST` (the report payload is sent as the
+> request body). With `method: GET` the body is still sent, but that is
+> non-standard.
 
 ### Task `interval` field
 

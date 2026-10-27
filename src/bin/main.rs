@@ -40,27 +40,36 @@
 //! `nasu.json` is the default configuration file for Nasu. This file is
 //! parsed at startup by Nasu to initialize `Workers`.
 //!
-//! The `nasu.json` file is composed by an array of `Task` objects as shown
+//! The `nasu.json` file is composed by an optional `notify` object and an
+//! array of `tasks` as shown
 //! below:
 //!
 //! ```json
 //! // nasu.json
-//! [
-//!   {
-//!     "id": "HTTPBIN POST Request",
-//!     "task": {
-//!       "interval": "* */10 * * * *"
-//!     },
-//!     "params": {
-//!       "url": "http://httpbin.org/post",
-//!       "method": "POST",
-//!       "headers": {
-//!         "authorization": "Bearer <Token>",
-//!         "content-type": "application/json"
+//! {
+//!   "notify": {
+//!     "url": "http://127.0.0.1:8080/hook",
+//!     "method": "POST",
+//!     "send": "errors",
+//!     "format": "json"
+//!   },
+//!   "tasks": [
+//!     {
+//!       "id": "HTTPBIN POST Request",
+//!       "task": {
+//!         "interval": "0 */10 * * * *"
+//!       },
+//!       "params": {
+//!         "url": "http://httpbin.org/post",
+//!         "method": "POST",
+//!         "headers": {
+//!           "authorization": "Bearer <Token>",
+//!           "content-type": "application/json"
+//!         }
 //!       }
 //!     }
-//!   }
-//! ]
+//!   ]
+//! }
 //! ```
 //!
 //! Each of these `Task` must contain the following properties:
