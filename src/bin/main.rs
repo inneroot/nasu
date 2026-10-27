@@ -123,6 +123,8 @@ use libnasu::run;
 use tokio::runtime::Builder;
 
 fn main() {
+    let use_color = std::env::args().any(|arg| arg == "--color");
+
     let rt = Builder::new_multi_thread()
         .worker_threads(4)
         .thread_name("nasu-main-proc")
@@ -131,6 +133,6 @@ fn main() {
         .unwrap();
 
     rt.block_on(async {
-        run().await.unwrap();
+        run(use_color).await.unwrap();
     });
 }

@@ -4,6 +4,7 @@ use tokio::sync::mpsc::channel;
 use crate::providers::http::Report as HttpReport;
 use crate::report::{ErrorReport, Report};
 use crate::tasks::adapters::from_file;
+use crate::utils::color::{green, red, yellow};
 use crate::utils::timestamp::{current_timestamp, format_timestamp};
 use crate::worker::{Squad, Worker};
 
@@ -12,7 +13,7 @@ use crate::worker::{Squad, Worker};
 /// from. Default for now is "nasu.json"
 const CONFIG_FILE_NAME: &str = "nasu.json";
 
-pub async fn run() -> Result<()> {
+pub async fn run(use_color: bool) -> Result<()> {
     let tasks =
         from_file(CONFIG_FILE_NAME).context(format!("Failed to parse \"{}\"", CONFIG_FILE_NAME))?;
     let workers: Vec<Worker> = tasks.into_iter().map(|task| Worker::from(task)).collect();
@@ -38,8 +39,8 @@ pub async fn run() -> Result<()> {
                         "{0: <30} | {1: <15} | {2: <20} | {3: <10}",
                         format_timestamp(current_timestamp()),
                         id,
-                        status_code,
-                        format!("{}ms", req_end - req_start)
+                        status_cell(use_color, status_code),
+                        delay_cell(use_color, req_end - req_start)
                     );
                 }
                 Report::Error(ErrorReport {
@@ -52,8 +53,8 @@ pub async fn run() -> Result<()> {
                         "{0: <30} | {1: <15} | {2: <20} | {3: <10}",
                         format_timestamp(current_timestamp()),
                         id,
-                        error,
-                        format!("{}ms", req_end - req_start)
+                        red(use_color, error.clone()),
+                        delay_cell(use_color, req_end - req_start)
                     );
                 }
             }
@@ -71,5 +72,23 @@ pub async fn run() -> Result<()> {
       _ = run_proc => {
         Err(Error::msg("Run process stopped"))
       },
+    }
+}
+
+fn status_cell(use_color: bool, status_code: u16) -> String {
+    match status_code {
+        200 => green(use_color, status_code.to_string()),
+        300..=499 => yellow(use_color, status_code.to_string()),
+        _ => red(use_color, status_code.to_string()),
+    }
+}
+
+fn delay_cell(use_color: bool, elapsed_ms: u128) -> String {
+    let value = format!("{}ms", elapsed_ms);
+
+    match elapsed_ms {
+        0..=499 => green(use_color, value),
+        500..=999 => yellow(use_color, value),
+        _ => red(use_color, value),
     }
 }
