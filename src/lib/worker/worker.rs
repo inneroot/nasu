@@ -2,6 +2,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use cron::Schedule;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::RwLock;
 
 use crate::providers::http;
@@ -14,13 +15,21 @@ pub struct Worker {
     perform: Box<dyn Perform + Sync + Send>,
     interval: Schedule,
     last_run_at: RwLock<Option<DateTime<Utc>>>,
+    running: AtomicBool,
 }
 
 impl Worker {
+    /// Checks whether this Worker is currently performing a task
+    pub fn is_running(&self) -> bool {
+        self.running.load(Ordering::SeqCst)
+    }
+
     /// Performs this Worker's task
     pub async fn perform_task(&self) -> Result<Report> {
+        self.running.store(true, Ordering::SeqCst);
         let report = self.perform.perform().await;
         *self.last_run_at.write().await = Some(Utc::now());
+        self.running.store(false, Ordering::SeqCst);
 
         report
     }
@@ -55,6 +64,7 @@ impl From<Task> for Worker {
                     perform: Box::new(http_provider),
                     interval,
                     last_run_at: RwLock::new(None),
+                    running: AtomicBool::new(false),
                 }
             }
         }

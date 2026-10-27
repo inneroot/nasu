@@ -9,6 +9,7 @@ use hyper_util::client::legacy::Client as HyperClient;
 use hyper_util::rt::TokioExecutor;
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::time::Duration;
 use url::Url;
 
 use crate::report::{ErrorReport, Report};
@@ -65,12 +66,22 @@ impl Perform for Provider {
                 self.task_title
             ))?;
 
-        let response = match self.http_client.request(request).await {
-            Ok(response) => response,
-            Err(err) => {
+        let response = match tokio::time::timeout(Duration::from_secs(60), self.http_client.request(request))
+            .await
+        {
+            Ok(Ok(response)) => response,
+            Ok(Err(err)) => {
                 return Ok(Report::Error(ErrorReport {
                     id: self.task_title.clone(),
                     error: describe_error(&err),
+                    req_start,
+                    req_end: current_timestamp(),
+                }));
+            }
+            Err(_) => {
+                return Ok(Report::Error(ErrorReport {
+                    id: self.task_title.clone(),
+                    error: "TIMEOUT".to_string(),
                     req_start,
                     req_end: current_timestamp(),
                 }));
