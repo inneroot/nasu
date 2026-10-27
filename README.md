@@ -25,10 +25,16 @@ to perform checks on remote addresses periodically.
 
 ## Usage
 
-Install nasu using `cargo install` command:
+> This is a fork of the original [EstebanBorai/nasu](https://github.com/EstebanBorai/nasu).
+> It adds colored output (`--color`), a per-request timeout, concurrency guards,
+> and a reworked timestamp format. All task configuration is HTTP-only.
+
+Build and install from this repository:
 
 ```shell
-cargo install nasu
+git clone git@github.com:inneroot/nasu.git
+cd nasu
+cargo install --path .
 ```
 
 Create a `nasu.json` file and execute `nasu`.
@@ -37,13 +43,47 @@ Nasu will execute the tasks specified on `nasu.json` and will provide details
 in your terminal as follows:
 
 ```
-Log Time        | Task            | HTTP. Status Code    | Req. Time       | Res. Time
-==========================================================================================
-1614824476370   | httpbin get     | 200                  | 1614824476081   | 1614824476369
-1614824476438   | httpbin post    | 200                  | 1614824476081   | 1614824476438
-1614824481220   | httpbin get     | 200                  | 1614824481084   | 1614824481220
-1614824486226   | httpbin get     | 200                  | 1614824486085   | 1614824486226
-1614824491221   | httpbin get     | 200                  | 1614824491085   | 1614824491221
+Log Time                       | Task            | HTTP. Status Code    | Req. Time
+=====================================================================================
+2026-10-27 17:42:01 UTC+03:00  | httpbin post    | 200                  | 252ms
+2026-10-27 17:42:02 UTC+03:00  | httpbin get     | 200                  | 1284ms
+2026-10-27 17:52:01 UTC+03:00  | httpbin post    | 200                  | 240ms
+2026-10-27 17:52:02 UTC+03:00  | httpbin get     | 200                  | 1270ms
+2026-10-27 18:02:01 UTC+03:00  | httpbin post    | 200                  | 235ms
+```
+
+With the `--color` flag the `HTTP. Status Code` and `Req. Time` cells are
+colored (green for `200`/fast, yellow for `3xx`/`4xx`/medium, red for `5xx`/slow
+or connection errors).
+
+## Command-line options
+
+Nasu accepts the following command-line flags:
+
+Flag | Description
+--- | ---
+`--color` | Colorizes the output. Without the flag the output contains no ANSI escape codes (suitable for piping or logging).
+
+When `--color` is enabled, the `HTTP. Status Code` and `Req. Time` columns are
+colored based on the outcome:
+
+Status | Color
+--- | ---
+HTTP `200` | Green
+HTTP `3xx` / `4xx` | Yellow
+HTTP `5xx` | Red
+Connection errors (e.g. `CONNECTION REFUSED`, `TIMEOUT`) | Red
+
+Condition (request delay) | Color
+--- | ---
+`< 500ms` | Green
+`500ms` – `999ms` | Yellow
+`>= 1000ms` | Red
+
+Example:
+
+```shell
+nasu --color
 ```
 
 ## Terminology
@@ -78,7 +118,6 @@ below:
 [
   {
     "id": "HTTPBIN POST Request",
-    "type": "http",
     "task": {
       "interval": "* */10 * * * *"
     },
@@ -99,7 +138,6 @@ Each of these `Task` must contain the following properties:
 Property | Description | Required | Possible Values
 --- | --- | --- | ---
 `id` | The id of the service. Used as reference for the user | Yes | N/A
-`type` | Type of service to perform check on | Yes | `http`
 `task` | Task configuration | Yes | N/A
 `task.interval` | Cron defintion to specify when to perform the test | Yes | N/A
 `params` | Params for the `Worker` used on perform. [Refer to Worker Params](#worker-params) | Yes | N/A
