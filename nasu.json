@@ -1,7 +1,6 @@
 [
   {
     "id": "httpbin get",
-    "type": "http",
     "task": {
       "interval": "*/5 * * * * *"
     },
@@ -16,7 +15,6 @@
   },
   {
     "id": "httpbin post",
-    "type": "http",
     "task": {
       "interval": "* * */10 * * *"
     },

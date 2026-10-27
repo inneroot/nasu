@@ -48,7 +48,6 @@
 //! [
 //!   {
 //!     "id": "HTTPBIN POST Request",
-//!     "type": "http",
 //!     "task": {
 //!       "interval": "* */10 * * * *"
 //!     },
@@ -69,7 +68,6 @@
 //! Property | Description | Required | Possible Values
 //! --- | --- | --- | ---
 //! `id` | The id of the service. Used as reference for the user | Yes | N/A
-//! `type` | Type of service to perform check on | Yes | `http`
 //! `task` | Task configuration | Yes | N/A
 //! `task.interval` | Cron defintion to specify when to perform the test | Yes | N/A
 //! `params` | Params for the `Worker` used on perform. [Refer to Worker Params](#worker-params) | Yes | N/A

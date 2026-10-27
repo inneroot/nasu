@@ -7,7 +7,7 @@ use tokio::sync::RwLock;
 
 use crate::providers::http;
 use crate::report::Report;
-use crate::tasks::{Task, TaskType};
+use crate::tasks::Task;
 
 use super::perform::Perform;
 
@@ -54,19 +54,15 @@ impl Worker {
 
 impl From<Task> for Worker {
     fn from(t: Task) -> Self {
-        match t.task_type {
-            TaskType::Http => {
-                let interval = Schedule::from_str(&t.task.interval)
-                    .expect(&format!("Invalid chron expression: {}", t.task.interval));
-                let http_provider = http::Provider::new(t).unwrap();
+        let interval = Schedule::from_str(&t.task.interval)
+            .expect(&format!("Invalid chron expression: {}", t.task.interval));
+        let http_provider = http::Provider::new(t).unwrap();
 
-                Self {
-                    perform: Box::new(http_provider),
-                    interval,
-                    last_run_at: RwLock::new(None),
-                    running: AtomicBool::new(false),
-                }
-            }
+        Self {
+            perform: Box::new(http_provider),
+            interval,
+            last_run_at: RwLock::new(None),
+            running: AtomicBool::new(false),
         }
     }
 }
