@@ -60,7 +60,7 @@ pub async fn run(use_color: bool) -> Result<()> {
                         "{0: <30} | {1: <15} | {2: <20} | {3: <10}",
                         format_timestamp(current_timestamp()),
                         id,
-                        red(use_color, error.clone()),
+                        red(use_color, pad(20, error.clone())),
                         delay_cell(use_color, req_end - req_start)
                     );
                 }
@@ -95,19 +95,25 @@ pub async fn run(use_color: bool) -> Result<()> {
 }
 
 fn status_cell(use_color: bool, status_code: u16) -> String {
+    let text = pad(20, status_code.to_string());
+
     match status_code {
-        200 => green(use_color, status_code.to_string()),
-        300..=499 => yellow(use_color, status_code.to_string()),
-        _ => red(use_color, status_code.to_string()),
+        200 => green(use_color, text),
+        300..=499 => yellow(use_color, text),
+        _ => red(use_color, text),
     }
 }
 
 fn delay_cell(use_color: bool, elapsed_ms: u128) -> String {
-    let value = format!("{}ms", elapsed_ms);
+    let text = pad(10, format!("{}ms", elapsed_ms));
 
     match elapsed_ms {
-        0..=499 => green(use_color, value),
-        500..=999 => yellow(use_color, value),
-        _ => red(use_color, value),
+        0..=499 => green(use_color, text),
+        500..=999 => yellow(use_color, text),
+        _ => red(use_color, text),
     }
+}
+
+fn pad(width: usize, text: String) -> String {
+    format!("{: <width$}", text)
 }
