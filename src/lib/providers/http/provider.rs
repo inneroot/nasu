@@ -1,8 +1,12 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use hyper::client::HttpConnector;
-use hyper::{Body, Client as HyperClient, Method, Request, Uri};
+use bytes::Bytes;
+use http_body_util::Empty;
+use hyper::{Method, Request, Uri};
 use hyper_tls::HttpsConnector;
+use hyper_util::client::legacy::connect::HttpConnector;
+use hyper_util::client::legacy::Client as HyperClient;
+use hyper_util::rt::TokioExecutor;
 use std::collections::HashMap;
 use std::str::FromStr;
 use url::Url;
@@ -14,10 +18,12 @@ use crate::worker::perform::Perform;
 
 use super::{Params, Report as HttpReport};
 
+type HttpClient = HyperClient<HttpsConnector<HttpConnector>, Empty<Bytes>>;
+
 #[allow(dead_code)]
 pub struct Provider {
     task_title: String,
-    http_client: HyperClient<HttpsConnector<HttpConnector>>,
+    http_client: HttpClient,
     http_method: Method,
     params: Params,
     url: String,
@@ -32,7 +38,7 @@ impl Provider {
         let url = Url::from_str(params.url.as_str())
             .context(format!("Invalid URL provided for task {}", task.id))?;
 
-        let http_client = HyperClient::builder().build(HttpsConnector::new());
+        let http_client: HttpClient = HyperClient::builder(TokioExecutor::new()).build(HttpsConnector::new());
         let http_method = Method::from_str(params.method.as_str())
             .context(format!("Invalid HTTP Method provided for task {}", task.id))?;
 
@@ -53,7 +59,7 @@ impl Perform for Provider {
         let request = Request::builder()
             .uri(Uri::from_str(self.url.as_str()).unwrap())
             .method(self.http_method.clone())
-            .body(Body::empty())
+            .body(Empty::<Bytes>::new())
             .context(format!(
                 "Failed to build Request struct on {}",
                 self.task_title
